@@ -186,7 +186,6 @@ resource "aws_instance" "backend_server" {
   subnet_id              = aws_subnet.private_subnet.id
   vpc_security_group_ids = [aws_security_group.backend_security_group.id]
   key_name               = var.key_name
-  # do i need associate public ip address flag set to true here?
   tags = {
     Name = "backend_server"
   }
