@@ -9,7 +9,7 @@ This project is a Django-based ecommerce application with a React frontend, depl
 The project uses Terraform to provision AWS resources:
 
 - 1 VPC
-- 2 Availability Zones
+- 1 Availability Zones
 - 2 Subnets (1 public, 1 private)
 - 2 EC2 instances (frontend in public subnet, backend in private subnet)
 - 2 Route Tables
