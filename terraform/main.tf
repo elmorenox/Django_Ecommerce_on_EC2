@@ -1,13 +1,13 @@
 # 1 VPC
 # 2 AZ's
-# 2 Subnets
-# 2 EC2's
+# 3 Subnets
+# 3 EC2's
 # 2 Route Table
 # Security Group Ports: 8080, 8000, 3000, 22 for frontend 
 # BE Security Group: 22, 8000
 
 provider "aws" {
-  region = "us-east-1" 
+  region = "us-east-1"
 }
 #VPC
 resource "aws_vpc" "ecommerce_vpc" {
@@ -52,6 +52,26 @@ resource "aws_subnet" "private_subnet" {
     Name = "ecommerce_private_subnet"
   }
 }
+
+# 2nd az, failover for rds and 2nd instaces of FE and BE (not included here but is part of student WL)
+resource "aws_subnet" "private_subnet_2" {
+  vpc_id            = aws_vpc.ecommerce_vpc.id
+  cidr_block        = var.subnet_cidr_blocks[2]
+  availability_zone = var.availability_zone_2
+  tags = {
+    Name = "ecommerce_private_subnet_2"
+  }
+}
+
+resource "aws_db_subnet_group" "rds_subnet_group" {
+  name       = "rds_subnet_group"
+  subnet_ids = [aws_subnet.private_subnet.id, aws_subnet.private_subnet_2.id]
+
+  tags = {
+    Name = "RDS subnet group"
+  }
+}
+
 
 # nat gateway (get internet into private subnet)
 resource "aws_nat_gateway" "ngw" {
@@ -122,7 +142,7 @@ resource "aws_security_group" "front_end_security_group" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -147,9 +167,9 @@ resource "aws_security_group" "backend_security_group" {
   }
 
   ingress {
-    from_port   = 22  # SSH port so the you can hop from frontend to backend
-    to_port     = 22
-    protocol    = "tcp"
+    from_port       = 22 # SSH port so the you can hop from frontend to backend
+    to_port         = 22
+    protocol        = "tcp"
     security_groups = [aws_security_group.front_end_security_group.id]
   }
 
@@ -165,6 +185,29 @@ resource "aws_security_group" "backend_security_group" {
   }
 }
 
+resource "aws_security_group" "rds_sg" {
+  name        = "rds_sg"
+  description = "Security group for RDS"
+  vpc_id      = aws_vpc.ecommerce_vpc.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.backend_security_group.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "RDS Security Group"
+  }
+}
 
 # EC2s
 resource "aws_instance" "frontend_server" {
@@ -174,7 +217,7 @@ resource "aws_instance" "frontend_server" {
   vpc_security_group_ids      = [aws_security_group.front_end_security_group.id]
   key_name                    = var.key_name
   associate_public_ip_address = true
-  user_data = file("frontend_install.sh")
+  user_data                   = file("frontend_install.sh")
   tags = {
     Name = "frontend_server"
   }
@@ -191,6 +234,33 @@ resource "aws_instance" "backend_server" {
   }
 }
 
+# Create the RDS instance
+resource "aws_db_instance" "postgres_db" {
+  identifier           = "ecommerce-db"
+  engine               = "postgres"
+  engine_version       = "14.13"
+  instance_class       = var.db_instance_class
+  allocated_storage    = 20
+  storage_type         = "standard"
+  db_name              = var.db_name
+  username             = var.db_username
+  password             = var.db_password
+  parameter_group_name = "default.postgres14"
+  skip_final_snapshot  = true
+
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+
+  tags = {
+    Name = "Ecommerce Postgres DB"
+  }
+}
+
+
 output "instance_ips" {
   value = [aws_instance.frontend_server.public_ip]
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.postgres_db.endpoint
 }

@@ -18,4 +18,17 @@ source env/bin/activate
 
 pip install -r requirements.txt
 
+python manage.py makemigrations account
+python manage.py makemigrations payments
+python manage.py makemigrations product
+
+python manage.py migrate
+
+# dump data from sqlite file to json
+python manage.py dumpdata --database=sqlite --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json
+
+# load the data from the json file to postgres rds
+python manage.py loaddata datadump.json
+
+# start django app
 python manage.py runserver 0.0.0.0:8000

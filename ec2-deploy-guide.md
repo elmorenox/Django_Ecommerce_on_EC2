@@ -9,14 +9,14 @@ This project is a Django-based ecommerce application with a React frontend, depl
 The project uses Terraform to provision AWS resources:
 
 - 1 VPC
-- 1 Availability Zones
-- 2 Subnets (1 public, 1 private)
-- 2 EC2 instances (frontend in public subnet, backend in private subnet)
+- 2 Availability Zones
+- 3 Subnets (1 public, 2 private)
+- 3 EC2 instances (frontend in public subnet, backend in private subnet, RDS instance)
 - 2 Route Tables
 - Internet Gateway
 - NAT Gateway
 - Elastic IP
-- Security Groups
+- Security Groups for each subnet
 
 For detailed Terraform configuration, see the [main.tf](./terraform/main.tf) file.
 
@@ -42,11 +42,28 @@ For detailed Terraform configuration, see the [main.tf](./terraform/main.tf) fil
 
 4. Modify `settings.py`:
    - Update `ALLOWED_HOSTS` to include EC2 private IP
-   - Adjust other settings as needed for production
+   - Update `default` database with postgres RDS details
 
    See [settings.py](./backend/my_project/settings.py) for details.
 
-5. Run Django server:
+5. Load data to Postgres RDS 
+   - Create tables in RDS
+   ```
+   python manage.py makemigrations account
+   python manage.py makemigrations payments
+   python manage.py makemigrations product
+   python manage.py migrate
+   ```
+   - Migrate data from from file to RDS
+   ```
+   python manage.py dumpdata --database=sqlite --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json
+
+   python manage.py loaddata datadump.json
+   ```
+
+   See [settings.py](./backend/my_project/settings.py) for details.
+
+6. Run Django server:
    ```
    python manage.py runserver 0.0.0.0:8000
    ```
