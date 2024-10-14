@@ -17,6 +17,7 @@ The project uses Terraform to provision AWS resources:
 - NAT Gateway
 - Elastic IP
 - Security Groups for each subnet
+- 1 RDS instance
 
 For detailed Terraform configuration, see the [main.tf](./terraform/main.tf) file.
 
