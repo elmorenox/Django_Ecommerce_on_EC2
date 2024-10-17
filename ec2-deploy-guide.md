@@ -55,7 +55,7 @@ For detailed Terraform configuration, see the [main.tf](./terraform/main.tf) fil
    python manage.py makemigrations product
    python manage.py migrate
    ```
-   - Migrate data from from file to RDS
+   - Migrate data from sqlite file to RDS
    ```
    python manage.py dumpdata --database=sqlite --natural-foreign --natural-primary -e contenttypes -e auth.Permission --indent 4 > datadump.json
 
